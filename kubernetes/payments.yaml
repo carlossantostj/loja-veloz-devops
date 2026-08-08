@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments
+  namespace: loja-veloz
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxUnavailable: 0, maxSurge: 1}
+  selector: {matchLabels: {app: payments}}
+  template:
+    metadata: {labels: {app: payments}}
+    spec:
+      securityContext:
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+      - name: payments
+        image: ghcr.io/<GITHUB_USER>/loja-veloz-payments:1.0.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: PORT, value: 3002}
+        ports: [{containerPort: 3002}]
+        resources:
+          requests: {cpu: 100m, memory: 128Mi}
+          limits: {cpu: 500m, memory: 256Mi}
+        readinessProbe:
+          httpGet: {path: /health, port: 3002}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet: {path: /health, port: 3002}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities: {drop: ["ALL"]}
+          readOnlyRootFilesystem: true
+          seccompProfile: {type: RuntimeDefault}
+        volumeMounts: [{name: tmp, mountPath: /tmp}]
+      volumes: [{name: tmp, emptyDir: {}}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments
+  namespace: loja-veloz
+spec:
+  selector: {app: payments}
+  ports: [{port: 3002, targetPort: 3002}]
