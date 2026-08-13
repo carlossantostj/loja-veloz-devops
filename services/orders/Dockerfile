@@ -8,9 +8,10 @@ RUN npm install --omit=dev
 
 COPY src ./src
 
-RUN addgroup -S app && adduser -S app -G app
+RUN addgroup -S -g 1001 app && \
+    adduser -S -u 1001 -G app app
 
-USER app
+USER 1001:1001
 
 ENV NODE_ENV=production
 
